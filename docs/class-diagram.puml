@@ -1,0 +1,429 @@
+@startuml
+skinparam monochrome true
+
+package "WineInventory.Shared.Domain" {
+  package "Model" {
+    package "Events" {
+      interface "IEvent" as Shared_IEvent { }
+    }
+
+    package "ValueObjects" {
+      class "AccountId" as Shared_AccountId <<record>> {
+        +Id: String
+      }
+      class "ProductId" as Shared_ProductId <<record>> {
+        +Id: String
+      }
+      class "InventoryId" as Shared_InventoryId <<record>> {
+        +Id: String
+      }
+      class "UserId" as Shared_UserId <<record>> {
+        +Id: String
+      }
+      class "Money" as Shared_Money <<record>> {
+        +amount: Double
+        +currency: String
+        --
+        +toString(): String
+      }
+      class "Email" as Shared_Email <<record>> {
+        +address: String
+        --
+        -isValid(address: String): Boolean
+      }
+      class "ImageUrl" as Shared_ImageUrl <<record>> {
+        +uri: String
+        --
+        +toString(): String
+      }
+    }
+    package "Entities" {
+      class "AuditableModel" as Shared_AuditableModel {
+        +id: Long
+        +createdAt: Date
+        +updatedAt: Date
+      }
+    }
+  }
+
+  package "Repositories" {
+    interface "IBaseRepository" as Shared_IBaseRepository { }
+  }
+}
+
+package "WineInventory.IAM.Domain" {
+  package "Model" {
+    package "Aggregates" {
+      class "User" as Auth_User { }
+    }
+    package "Commands" {
+      class "CreateUserCommand" as CreateUserCommand { }
+      class "SignInCommand" as SignInCommand { }
+      class "SignUpCommand" as SignUpCommand { }
+      class "GoogleSignInCommand" as GoogleSignInCommand { }
+    }
+    package "Events" {
+      class "AccountOwnerUserCreatedEvent" as AccountOwnerUserCreatedEvent { }
+    }
+    package "Queries" {
+      class "GetUserByIdQuery" as GetUserByIdQuery { }
+      class "GetUserByEmailQuery" as GetUserByEmailQuery { }
+      class "GetAllUsersByAccountIdQuery" as GetAllUsersByAccountIdQuery { }
+    }
+    package "ValueObjects" {
+      enum "UserRoles" as UserRoles {
+      }
+    }
+  }
+
+  package "Services" {
+    interface "UserCommandService" as UserCommandService { }
+    interface "UserQueryService" as UserQueryService { }
+    class "GoogleAuthService" as GoogleAuthService { }
+  }
+
+  package "Repositories" {
+    interface "UserRepository" as UserRepository { }
+  }
+
+  UserRepository ..> Auth_User : uses
+  UserRepository ..> Shared_IBaseRepository : implements
+  Auth_User "1" --> "1" Shared_UserId : userId
+  Auth_User "1" --> "1" Shared_Email : email
+  Auth_User "1" --> "1" UserRoles : role
+  UserCommandService ..> CreateUserCommand : uses
+  UserQueryService ..> GetUserByIdQuery : uses
+  UserQueryService ..> GetUserByEmailQuery : uses
+  UserQueryService ..> GetAllUsersByAccountIdQuery : uses
+  GoogleAuthService ..> GoogleSignInCommand : uses
+}
+
+package "WineInventory.AlertsAndNotifications.Domain" {
+  package "Model" {
+    class "Alert" as Alert {
+      +id: String
+      +title: String
+      +message: String
+      +severity: SeverityTypes
+      +type: AlertTypes
+      +productId: String
+      +warehouseId: String
+      +state: String
+    }
+
+    enum "SeverityTypes" as SeverityTypes {
+      WARNING
+      HIGH
+      MEDIUM
+      LOW
+    }
+
+    enum "AlertTypes" as AlertTypes {
+      PRODUCTLOWSTOCK
+      EXPIRATION_WARNING
+    }
+    package "ValueObjects" {
+      class "AccountId" as Alerts_AccountId { }
+      class "AlertState" as AlertState { }
+    }
+    package "Commands" {
+      class "CreateAlertCommand" as CreateAlertCommand { }
+    }
+    package "Queries" {
+      class "GetAlertByIdQuery" as GetAlertByIdQuery { }
+    }
+  }
+
+  package "Repositories" {
+    interface "IAlertRepository" as IAlertRepository { }
+  }
+
+  package "Services" {
+    interface "AlertCommandService" as AlertCommandService { }
+    interface "AlertQueryService" as AlertQueryService { }
+  }
+
+  Alert --> Shared_ProductId : "productId"
+  Alert --> Shared_InventoryId : "warehouseId"
+  IAlertRepository ..> Alert : uses
+  IAlertRepository ..> Shared_IBaseRepository : implements
+  AlertCommandService ..> CreateAlertCommand : uses
+  AlertQueryService ..> GetAlertByIdQuery : uses
+}
+
+package "WineInventory.InventoryManagement.Domain" {
+  package "Model" {
+    class "InventoryItemProps" as InventoryItemProps {
+      +id: string
+      +name: string
+      +type: LiquorType
+      +price: number
+      +expirationDate?: Date
+      +currentStock: number
+      +minStockLevel: number
+      +location: string
+      +imageUrl: string
+    }
+
+    enum "LiquorType" as LiquorType {
+      WINE
+      WHISKY
+      RUM
+      TEQUILA
+      SODA
+      SNACK
+    }
+    package "Aggregates" {
+      class "Product" as IM_Product { }
+      class "Inventory" as IM_Inventory { }
+    }
+    package "Entities" {
+      class "ProductExit" as IM_ProductExit { }
+    }
+    package "Commands" {
+      class "CreateProductCommand" as CreateProductCommand { }
+      class "DeleteProductCommand" as DeleteProductCommand { }
+    }
+    package "Events" {
+      class "ProductProblemDetectedEvent" as ProductProblemDetectedEvent { }
+    }
+    package "Queries" {
+      class "GetAllProductsByAccountIdQuery" as GetAllProductsByAccountIdQuery { }
+    }
+    package "Exceptions" {
+      class "ProductFailedCreationException" as ProductFailedCreationException { }
+    }
+    package "ValueObjects" {
+      class "AccountId" as IM_AccountId { }
+    }
+  }
+
+  package "Repositories" {
+    interface "IInventoryRepository" as IInventoryRepository { }
+    interface "ProductRepository" as ProductRepository { }
+  }
+
+  package "Services" {
+    interface "InventoryCommandService" as InventoryCommandService { }
+    interface "InventoryQueryService" as InventoryQueryService { }
+    interface "ProductCommandService" as ProductCommandService { }
+    interface "ProductQueryService" as ProductQueryService { }
+  }
+
+  InventoryItemProps --> Shared_InventoryId : "inventory id"
+  IInventoryRepository ..> InventoryItemProps : uses
+  IInventoryRepository ..> Shared_IBaseRepository : implements
+  ProductRepository ..> IM_Product : uses
+  ProductRepository ..> Shared_IBaseRepository : implements
+  ProductQueryService ..> GetAllProductsByAccountIdQuery : uses
+  ProductCommandService ..> CreateProductCommand : uses
+  ProductCommandService ..> DeleteProductCommand : uses
+}
+
+package "WineInventory.OrderOperationAndMonitoring.Domain" {
+  package "Model" {
+    class "CatalogItem" as CatalogItem {
+      +id: string
+      +name: string
+      +varietal: string
+      +vintage: number
+      +origin: string
+      +price: number
+      +imageUrl?: string
+      +tastingNotes?: string
+    }
+
+    class "OrderItem" as OrderItem {
+      +id: string
+      +catalogItem: CatalogItem
+      +quantity: number
+      +unitPrice: number
+      +lineTotal: number
+    }
+
+    class "Order" as Order {
+      +id: string
+      +code: string
+      +customerName: string
+      +customerEmail?: string
+      +status: OrderStatus
+      +createdAt: string
+      +expectedDelivery?: string
+      +notes?: string
+      +items: OrderItem[]
+      +subtotal: number
+      +tax: number
+      +total: number
+    }
+
+    class "NewOrderItemInput" as NewOrderItemInput {
+      +catalogItemId: string
+      +quantity: number
+    }
+
+    class "NewOrderInput" as NewOrderInput {
+      +customerName: string
+      +customerEmail?: string
+      +notes?: string
+      +status: OrderStatus
+      +createdAt: string
+      +expectedDelivery: string
+      +items: NewOrderItemInput[]
+    }
+
+    enum "OrderStatus" as OrderStatus {
+      NEW
+      PROCESSING
+      COMPLETED
+      CANCELED
+    }
+    package "Aggregates" {
+      class "SalesOrder" as SalesOrder { }
+    }
+    package "Entities" {
+      class "SalesOrderItem" as SalesOrderItem { }
+    }
+    package "Commands" {
+      class "GenerateSalesOrderCommand" as GenerateSalesOrderCommand { }
+    }
+    package "Events" {
+      class "OrderCompletedEvent" as OrderCompletedEvent { }
+    }
+    package "Queries" {
+      class "GetAllSalesOrdersByBuyerIdQuery" as GetAllSalesOrdersByBuyerIdQuery { }
+    }
+    package "ValueObjects" {
+      interface "Deliverable" as Deliverable { }
+    }
+  }
+
+  package "Services" {
+    interface "SalesOrderCommandService" as SalesOrderCommandService { }
+  }
+
+  package "Repositories" {
+    interface "SalesOrderRepository" as SalesOrderRepository { }
+  }
+
+  OrderItem --> CatalogItem : references
+  SalesOrderRepository ..> SalesOrder : uses
+  SalesOrderRepository ..> Shared_IBaseRepository : implements
+  SalesOrder "1" o-- "*" SalesOrderItem : contains
+  SalesOrderItem "1" --> "1" IM_Product : references
+  SalesOrder ..> Deliverable : implements
+  GenerateSalesOrderCommand ..> SalesOrder : creates
+  SalesOrderCommandService ..> GenerateSalesOrderCommand : uses
+}
+
+package "WineInventory.ProfileManagement.Domain" {
+  package "Model" {
+    class "AccountStatus" as AccountStatus {
+      +planName: String
+      +renewalDate: String
+      +supportContact: String
+      +statusLabel: String
+    }
+
+    class "Profile" as Profile {
+      +id: String
+      +fullName: String
+      +role: String
+      +email: String
+      +phone: String
+      +location: String
+      +username: String
+      +avatarUrl?: String
+      +accountStatus: AccountStatus
+      +selectedPlanId: String
+      +lastUpdated?: string
+    }
+    package "ValueObjects" {
+      class "PersonName" as PersonName { }
+    }
+    package "Commands" {
+      class "CreateProfileCommand" as CreateProfileCommand { }
+      class "UpdateProfileCommand" as UpdateProfileCommand { }
+    }
+    package "Queries" {
+      class "GetAllProfilesQuery" as GetAllProfilesQuery { }
+    }
+  }
+
+  package "Services" {
+    interface "ProfileCommandService" as ProfileCommandService { }
+    interface "ProfileQueryService" as ProfileQueryService { }
+  }
+
+  package "Repositories" {
+    interface "ProfileRepository" as ProfileRepository { }
+  }
+
+  Profile --> Shared_UserId : "userId"
+  Profile "1" --> "1" PersonName : relates to
+  ProfileRepository ..> Profile : uses
+  ProfileRepository ..> Shared_IBaseRepository : implements
+  ProfileCommandService ..> CreateProfileCommand : uses
+  ProfileCommandService ..> UpdateProfileCommand : uses
+  ProfileQueryService ..> GetAllProfilesQuery : uses
+}
+
+package "WineInventory.ReportingAndCareGuide.Domain" {
+  package "Model" {
+    class "CareGuide" as CareGuide {
+      +name: String
+      +type: String
+      +description: String
+      +imageUrl: String
+    }
+
+    class "Report" as Report {
+      +id: number
+      +products: String
+      +type: String
+      +price: number
+      +amount: number
+      +date: string
+      +lost: number
+    }
+    package "Commands" {
+      class "CreateReportCommand" as CreateReportCommand { }
+      class "DeleteReportCommand" as DeleteReportCommand { }
+    }
+    package "Queries" {
+      class "GetReportByIdQuery" as GetReportByIdQuery { }
+      class "GetReportByProductNameQuery" as GetReportByProductNameQuery { }
+      class "GetReportByReportDateAndLostAmountQuery" as GetReportByReportDateAndLostAmountQuery { }
+      class "GetReportByTypeQuery" as GetReportByTypeQuery { }
+    }
+    package "Exceptions" {
+      class "DuplicateReportException" as DuplicateReportException { }
+    }
+    package "ValueObjects" {
+      class "ProductId" as RC_ProductId { }
+    }
+  }
+
+  package "Repositories" {
+    interface "ReportRepository" as ReportRepository { }
+    interface "CareGuideRepository" as CareGuideRepository { }
+  }
+
+  package "Services" {
+    interface "ReportCommandService" as ReportCommandService { }
+    interface "ReportQueryService" as ReportQueryService { }
+    class "ImageService" as ImageService { }
+  }
+  ReportCommandService ..> CreateReportCommand : uses
+  ReportCommandService ..> DeleteReportCommand : uses
+  ReportQueryService ..> GetReportByIdQuery : uses
+  ReportQueryService ..> GetReportByProductNameQuery : uses
+  ReportQueryService ..> GetReportByReportDateAndLostAmountQuery : uses
+  ReportQueryService ..> GetReportByTypeQuery : uses
+  CareGuideRepository ..> CareGuide : uses
+  ReportRepository ..> Report : uses
+  Report "1" --> "1" RC_ProductId : relates to
+  CareGuideRepository ..> Shared_IBaseRepository : implements
+  ReportRepository ..> Shared_IBaseRepository : implements
+}
+
+@enduml
