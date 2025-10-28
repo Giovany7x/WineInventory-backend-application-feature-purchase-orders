@@ -1,7 +1,7 @@
 package com.wineinventory.OrderOperationAndMonitoring.Domain.Model.ValueObjects;
 
 /**
- * Enumerates the states that a sales order can be in during its lifecycle.
+ * Enumera los posibles estados del ciclo de vida de una orden de venta.
  */
 public enum OrderStatus {
     PENDING,

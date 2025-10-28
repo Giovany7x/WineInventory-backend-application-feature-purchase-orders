@@ -1,7 +1,7 @@
 package com.wineinventory.OrderOperationAndMonitoring.Domain.Model.ValueObjects;
 
 /**
- * Contract for value objects that describe delivery information for an order.
+ * Contrato para value objects que describen la información de entrega de una orden.
  */
 public interface Deliverable {
     String getRecipientName();

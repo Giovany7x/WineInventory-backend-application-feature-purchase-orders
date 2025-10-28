@@ -2,6 +2,9 @@ package com.wineinventory.OrderOperationAndMonitoring.interfaces.rest.resources;
 
 import jakarta.validation.constraints.NotBlank;
 
+/**
+ * Payload con los datos necesarios para entregar una orden al cliente final.
+ */
 public record DeliveryInformationResource(
         @NotBlank String recipientName,
         @NotBlank String contactPhone,

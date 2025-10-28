@@ -6,6 +6,10 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
+/**
+ * Representa el payload que la API espera al registrar una nueva orden de venta.
+ * Incluye validaciones de Bean Validation para asegurar datos completos desde el request.
+ */
 public record CreateSalesOrderResource(
         @NotNull Long buyerId,
         @NotBlank String currency,
