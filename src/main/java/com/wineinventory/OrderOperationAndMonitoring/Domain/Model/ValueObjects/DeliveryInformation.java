@@ -5,29 +5,38 @@ import jakarta.persistence.Embeddable;
 import java.util.Objects;
 
 /**
- * Value object that represents the delivery details associated with a sales order.
+ * Value object que encapsula los detalles de entrega asociados a una orden de venta.
+ * Se define como embebible para que pueda reutilizarse en diferentes entidades sin crear
+ * una tabla independiente; cada campo se persiste junto con la orden.
  */
 @Embeddable
 public class DeliveryInformation implements Deliverable {
 
+    /** Nombre de la persona que recibirá el pedido. */
     @Column(name = "delivery_recipient_name", nullable = false)
     private String recipientName;
 
+    /** Número telefónico de contacto del destinatario. */
     @Column(name = "delivery_contact_phone", nullable = false)
     private String contactPhone;
 
+    /** Dirección donde se realizará la entrega. */
     @Column(name = "delivery_address_line", nullable = false)
     private String addressLine;
 
+    /** Ciudad del destino de entrega. */
     @Column(name = "delivery_city", nullable = false)
     private String city;
 
+    /** Estado o provincia del destino de entrega. */
     @Column(name = "delivery_state", nullable = false)
     private String state;
 
+    /** Código postal asociado a la dirección de entrega. */
     @Column(name = "delivery_postal_code", nullable = false)
     private String postalCode;
 
+    /** País donde se encuentra el destinatario. */
     @Column(name = "delivery_country", nullable = false)
     private String country;
 
@@ -35,6 +44,9 @@ public class DeliveryInformation implements Deliverable {
         // Required by JPA
     }
 
+    /**
+     * Crea la información de entrega exigiendo todos los datos necesarios para coordinar el envío.
+     */
     public DeliveryInformation(String recipientName, String contactPhone, String addressLine,
                                String city, String state, String postalCode, String country) {
         this.recipientName = Objects.requireNonNull(recipientName, "Recipient name is required");

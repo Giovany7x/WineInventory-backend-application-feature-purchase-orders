@@ -1,7 +1,8 @@
 package com.wineinventory.OrderOperationAndMonitoring.Domain.Model.Queries;
 
 /**
- * Query that retrieves all the sales orders associated with a buyer.
+ * Consulta sencilla que modela la intención de recuperar todas las órdenes de un comprador
+ * específico para la capa de aplicación.
  */
 public record GetAllSalesOrdersByBuyerIdQuery(Long buyerId) {
 }

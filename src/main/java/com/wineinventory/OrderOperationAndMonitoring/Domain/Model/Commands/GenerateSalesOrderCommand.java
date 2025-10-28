@@ -4,7 +4,8 @@ import com.wineinventory.OrderOperationAndMonitoring.Domain.Model.ValueObjects.D
 import java.util.List;
 
 /**
- * Command used to generate a new sales order aggregate.
+ * Comando de aplicación que encapsula toda la información necesaria para crear
+ * una nueva orden de venta desde la capa de interfaces.
  */
 public record GenerateSalesOrderCommand(
         Long buyerId,
@@ -14,6 +15,9 @@ public record GenerateSalesOrderCommand(
         String notes
 ) {
 
+    /**
+     * Estructura ligera que describe cada ítem que se desea incluir en la orden.
+     */
     public record Item(Long productId, String productName, Integer quantity, Double unitPrice) {
     }
 }

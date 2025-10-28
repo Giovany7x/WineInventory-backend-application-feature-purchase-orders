@@ -9,11 +9,17 @@ import com.wineinventory.shared.domain.model.valueobjects.Money;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Clase utilitaria que traduce entre los recursos expuestos por la API y los modelos del dominio.
+ */
 public final class SalesOrderResourceAssembler {
 
     private SalesOrderResourceAssembler() {
     }
 
+    /**
+     * Convierte un recurso de creación recibido por la API en el comando de aplicación correspondiente.
+     */
     public static GenerateSalesOrderCommand toCommand(CreateSalesOrderResource resource) {
         DeliveryInformation deliveryInformation = new DeliveryInformation(
                 resource.delivery().recipientName(),
@@ -38,6 +44,9 @@ public final class SalesOrderResourceAssembler {
                 resource.notes());
     }
 
+    /**
+     * Transforma un agregado de orden en el recurso listo para serializarse y enviarse al cliente.
+     */
     public static SalesOrderResource toResource(SalesOrder order) {
         List<SalesOrderItemResource> orderItems = order.getItems().stream()
                 .map(SalesOrderResourceAssembler::toResource)
@@ -63,6 +72,9 @@ public final class SalesOrderResourceAssembler {
                 orderItems);
     }
 
+    /**
+     * Construye el recurso de un ítem individual a partir de la entidad del dominio.
+     */
     private static SalesOrderItemResource toResource(SalesOrderItem item) {
         Money unitPrice = item.getUnitPrice();
         Money lineTotal = item.getLineTotal();
