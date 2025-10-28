@@ -4,9 +4,11 @@ import com.wineinventory.OrderOperationAndMonitoring.Domain.Model.Aggregates.Sal
 import com.wineinventory.OrderOperationAndMonitoring.Domain.Model.Commands.GenerateSalesOrderCommand;
 import com.wineinventory.OrderOperationAndMonitoring.Domain.Model.Entities.SalesOrderItem;
 import com.wineinventory.OrderOperationAndMonitoring.Domain.Model.ValueObjects.DeliveryInformation;
+import com.wineinventory.OrderOperationAndMonitoring.Domain.Model.ValueObjects.OrderStatus;
 import com.wineinventory.OrderOperationAndMonitoring.interfaces.rest.resources.*;
 import com.wineinventory.shared.domain.model.valueobjects.Money;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 /**
@@ -38,9 +40,13 @@ public final class SalesOrderResourceAssembler {
                 .collect(Collectors.toList());
         return new GenerateSalesOrderCommand(
                 resource.buyerId(),
+                resource.customerEmail(),
                 resource.currency(),
                 items,
                 deliveryInformation,
+                resource.deliveryDate(),
+                parseStatus(resource.status()),
+                resource.taxAmount(),
                 resource.notes());
     }
 
@@ -57,8 +63,12 @@ public final class SalesOrderResourceAssembler {
                 order.getId(),
                 order.getOrderNumber(),
                 order.getBuyerId(),
+                order.getCustomerEmail(),
                 order.getStatus().name(),
                 order.getOrderedAt(),
+                order.getDeliveryDate(),
+                new MoneyResource(order.getSubtotalAmount().amount(), order.getSubtotalAmount().currency()),
+                new MoneyResource(order.getTaxAmount().amount(), order.getTaxAmount().currency()),
                 new MoneyResource(total.amount(), total.currency()),
                 new DeliveryInformationResource(
                         delivery.getRecipientName(),
@@ -85,5 +95,19 @@ public final class SalesOrderResourceAssembler {
                 item.getQuantity(),
                 new MoneyResource(unitPrice.amount(), unitPrice.currency()),
                 new MoneyResource(lineTotal.amount(), lineTotal.currency()));
+    }
+
+    public static OrderStatus parseStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        String normalized = status.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "PENDING" -> OrderStatus.PENDING;
+            case "PROCESSING", "IN_PROGRESS" -> OrderStatus.PROCESSING;
+            case "COMPLETED", "FULFILLED" -> OrderStatus.COMPLETED;
+            case "CANCELLED", "CANCELED" -> OrderStatus.CANCELLED;
+            default -> throw new IllegalArgumentException("Unsupported order status: " + status);
+        };
     }
 }

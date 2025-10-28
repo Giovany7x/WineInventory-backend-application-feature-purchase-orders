@@ -36,8 +36,18 @@ public class SalesOrderCommandServiceImpl implements SalesOrderCommandService {
         if (command.currency() == null || command.currency().isBlank()) {
             throw new IllegalArgumentException("A valid currency code is required for the sales order");
         }
+        if (command.customerEmail() == null || command.customerEmail().isBlank()) {
+            throw new IllegalArgumentException("A customer email is required for the sales order");
+        }
+        if (command.deliveryDate() == null) {
+            throw new IllegalArgumentException("A delivery date is required for the sales order");
+        }
+        if (command.deliveryInformation() == null) {
+            throw new IllegalArgumentException("Delivery information is required for the sales order");
+        }
         // Se crea el agregado inicializado con datos base.
-        SalesOrder salesOrder = SalesOrder.create(command.buyerId(), command.currency(), command.deliveryInformation(), command.notes());
+        SalesOrder salesOrder = SalesOrder.create(command.buyerId(), command.customerEmail(), command.currency(),
+                command.deliveryInformation(), command.notes(), command.deliveryDate(), command.initialStatus());
         // Cada ítem del comando se transforma en una entidad del dominio y se agrega a la orden.
         command.items().forEach(item -> {
             validateItem(item);
@@ -45,6 +55,7 @@ public class SalesOrderCommandServiceImpl implements SalesOrderCommandService {
             SalesOrderItem salesOrderItem = new SalesOrderItem(item.productId(), item.productName(), item.quantity(), unitPrice);
             salesOrder.addItem(salesOrderItem);
         });
+        salesOrder.updateTaxAmount(command.taxAmount());
         // Se persiste el agregado completo, delegando en JPA la cascada hacia los ítems.
         return salesOrderRepository.save(salesOrder);
     }

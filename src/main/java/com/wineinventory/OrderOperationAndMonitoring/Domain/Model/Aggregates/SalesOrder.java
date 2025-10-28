@@ -25,8 +25,12 @@ public class SalesOrder extends AuditableAbstractAggregateRoot<SalesOrder> {
     private Long id;
 
     /** Identificador del comprador que originó la orden. */
-    @Column(nullable = false)
+    @Column
     private Long buyerId;
+
+    /** Correo electrónico del comprador que originó la orden. */
+    @Column(name = "customer_email", nullable = false)
+    private String customerEmail;
 
     /** Código legible de la orden que se expone públicamente. */
     @Column(nullable = false, unique = true)
@@ -36,6 +40,10 @@ public class SalesOrder extends AuditableAbstractAggregateRoot<SalesOrder> {
     @Column(nullable = false)
     private LocalDateTime orderedAt;
 
+    /** Fecha y hora pactada para la entrega de la orden. */
+    @Column(name = "delivery_date", nullable = false)
+    private LocalDateTime deliveryDate;
+
     /** Estado del flujo de la orden (pendiente, procesando, completada, etc.). */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -44,6 +52,22 @@ public class SalesOrder extends AuditableAbstractAggregateRoot<SalesOrder> {
     /** Información de entrega asociada a la orden. */
     @Embedded
     private DeliveryInformation deliveryInformation;
+
+    /** Monto total de la orden expresado en la moneda seleccionada. */
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "amount", column = @Column(name = "subtotal_amount", nullable = false)),
+            @AttributeOverride(name = "currency", column = @Column(name = "subtotal_currency", nullable = false))
+    })
+    private Money subtotalAmount;
+
+    /** Impuestos asociados a la orden. */
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "amount", column = @Column(name = "tax_amount", nullable = false)),
+            @AttributeOverride(name = "currency", column = @Column(name = "tax_currency", nullable = false))
+    })
+    private Money taxAmount;
 
     /** Monto total de la orden expresado en la moneda seleccionada. */
     @Embedded
@@ -69,22 +93,30 @@ public class SalesOrder extends AuditableAbstractAggregateRoot<SalesOrder> {
      * Constructor privado que garantiza la creación de una orden en un estado válido.
      * Se utiliza a través del método fábrica {@link #create(Long, String, DeliveryInformation, String)}.
      */
-    private SalesOrder(Long buyerId, String currency, DeliveryInformation deliveryInformation, String notes) {
-        this.buyerId = Objects.requireNonNull(buyerId, "The buyer identifier is required");
+    private SalesOrder(Long buyerId, String customerEmail, String currency, DeliveryInformation deliveryInformation,
+                       String notes, LocalDateTime deliveryDate, OrderStatus initialStatus) {
+        this.buyerId = buyerId;
+        this.customerEmail = Objects.requireNonNull(customerEmail, "The customer email is required");
         this.deliveryInformation = Objects.requireNonNull(deliveryInformation, "Delivery information is required");
         this.notes = notes;
-        this.status = OrderStatus.PENDING;
+        this.status = Objects.requireNonNullElse(initialStatus, OrderStatus.PENDING);
         this.orderNumber = generateOrderNumber();
         this.orderedAt = LocalDateTime.now();
-        this.totalAmount = Money.of(0.0, Objects.requireNonNull(currency, "Currency is required"));
+        this.deliveryDate = Objects.requireNonNull(deliveryDate, "Delivery date is required");
+        String resolvedCurrency = Objects.requireNonNull(currency, "Currency is required");
+        this.subtotalAmount = Money.of(0.0, resolvedCurrency);
+        this.taxAmount = Money.of(0.0, resolvedCurrency);
+        this.totalAmount = Money.of(0.0, resolvedCurrency);
     }
 
     /**
      * Método fábrica que encapsula la creación de la orden para asegurar que siempre
      * se inicialice con los valores requeridos y reglas de negocio predefinidas.
      */
-    public static SalesOrder create(Long buyerId, String currency, DeliveryInformation deliveryInformation, String notes) {
-        return new SalesOrder(buyerId, currency, deliveryInformation, notes);
+    public static SalesOrder create(Long buyerId, String customerEmail, String currency,
+                                    DeliveryInformation deliveryInformation, String notes,
+                                    LocalDateTime deliveryDate, OrderStatus initialStatus) {
+        return new SalesOrder(buyerId, customerEmail, currency, deliveryInformation, notes, deliveryDate, initialStatus);
     }
 
     /**
@@ -122,10 +154,11 @@ public class SalesOrder extends AuditableAbstractAggregateRoot<SalesOrder> {
      * Calcula nuevamente el total de la orden sumando el subtotal de cada ítem.
      */
     private void recalculateTotals() {
-        double total = this.items.stream()
+        double subtotal = this.items.stream()
                 .mapToDouble(item -> item.getLineTotal().amount())
                 .sum();
-        this.totalAmount = Money.of(total, this.totalAmount.currency());
+        this.subtotalAmount = Money.of(subtotal, this.totalAmount.currency());
+        this.totalAmount = Money.of(subtotal + this.taxAmount.amount(), this.totalAmount.currency());
     }
 
     /**
@@ -139,12 +172,20 @@ public class SalesOrder extends AuditableAbstractAggregateRoot<SalesOrder> {
         return buyerId;
     }
 
+    public String getCustomerEmail() {
+        return customerEmail;
+    }
+
     public String getOrderNumber() {
         return orderNumber;
     }
 
     public LocalDateTime getOrderedAt() {
         return orderedAt;
+    }
+
+    public LocalDateTime getDeliveryDate() {
+        return deliveryDate;
     }
 
     public OrderStatus getStatus() {
@@ -159,6 +200,14 @@ public class SalesOrder extends AuditableAbstractAggregateRoot<SalesOrder> {
         return totalAmount;
     }
 
+    public Money getSubtotalAmount() {
+        return subtotalAmount;
+    }
+
+    public Money getTaxAmount() {
+        return taxAmount;
+    }
+
     public String getNotes() {
         return notes;
     }
@@ -169,5 +218,14 @@ public class SalesOrder extends AuditableAbstractAggregateRoot<SalesOrder> {
 
     public String getCurrency() {
         return totalAmount.currency();
+    }
+
+    public void updateTaxAmount(Double taxAmount) {
+        double resolvedTax = taxAmount == null ? 0.0 : taxAmount;
+        if (resolvedTax < 0) {
+            throw new IllegalArgumentException("The tax amount cannot be negative");
+        }
+        this.taxAmount = Money.of(resolvedTax, this.totalAmount.currency());
+        this.totalAmount = Money.of(this.subtotalAmount.amount() + this.taxAmount.amount(), this.totalAmount.currency());
     }
 }
