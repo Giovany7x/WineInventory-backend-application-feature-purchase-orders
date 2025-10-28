@@ -1,6 +1,8 @@
 package com.wineinventory.OrderOperationAndMonitoring.Domain.Model.Commands;
 
 import com.wineinventory.OrderOperationAndMonitoring.Domain.Model.ValueObjects.DeliveryInformation;
+import com.wineinventory.OrderOperationAndMonitoring.Domain.Model.ValueObjects.OrderStatus;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -9,9 +11,13 @@ import java.util.List;
  */
 public record GenerateSalesOrderCommand(
         Long buyerId,
+        String customerEmail,
         String currency,
         List<Item> items,
         DeliveryInformation deliveryInformation,
+        LocalDateTime deliveryDate,
+        OrderStatus initialStatus,
+        Double taxAmount,
         String notes
 ) {
 

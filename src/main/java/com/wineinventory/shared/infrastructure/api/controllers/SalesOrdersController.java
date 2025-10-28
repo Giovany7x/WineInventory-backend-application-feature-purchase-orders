@@ -64,10 +64,16 @@ public class SalesOrdersController {
     public SalesOrderResource updateOrderStatus(@PathVariable Long orderId,
                                                 @Valid @RequestBody UpdateSalesOrderStatusResource resource) {
         try {
-            SalesOrder updatedOrder = salesOrderCommandService.updateStatus(orderId, resource.status());
+            var newStatus = SalesOrderResourceAssembler.parseStatus(resource.status());
+            if (newStatus == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order status value is required");
+            }
+            SalesOrder updatedOrder = salesOrderCommandService.updateStatus(orderId, newStatus);
             return SalesOrderResourceAssembler.toResource(updatedOrder);
         } catch (EntityNotFoundException ex) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
         }
     }
 
