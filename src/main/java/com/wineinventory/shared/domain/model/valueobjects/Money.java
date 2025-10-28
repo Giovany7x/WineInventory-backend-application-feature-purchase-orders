@@ -13,10 +13,23 @@ import jakarta.persistence.Embeddable;
  * @since 1.0.0
  */
 @Embeddable
-public record Money(Double amount, String Currency) {
+public record Money(Double amount, String currency) {
+
+    public Money {
+        if (amount == null || amount < 0) {
+            throw new IllegalArgumentException("The monetary amount must be a non-negative value.");
+        }
+        if (currency == null || currency.isBlank()) {
+            throw new IllegalArgumentException("A valid currency code is required.");
+        }
+    }
+
+    public static Money of(Double amount, String currency) {
+        return new Money(amount, currency);
+    }
 
     @Override
     public String toString() {
-        return String.format("%.2f %s", amount, Currency);
+        return String.format("%.2f %s", amount, currency);
     }
 }
